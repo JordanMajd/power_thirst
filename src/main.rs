@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::time::{ Duration};
+use std::time::{ Duration };
 
 use tokio::time;
 // futures for notification stream.next
@@ -9,6 +9,7 @@ use btleplug::api::{Central, CharPropFlags, Manager as _, Peripheral as _, ScanF
 use btleplug::platform::{Manager, Peripheral};
 
 mod frame;
+mod commands;
 use frame::{Parse, PowerFrame};
 
 
@@ -31,6 +32,8 @@ const CHARACTERISTIC_POWER_MEASUREMENT: &str = "2a63";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+
+
     let manager = Manager::new().await?;
 
     // get primary adapter
