@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::time::{ Duration, SystemTime};
+use std::time::{ Duration, SystemTime, UNIX_EPOCH};
 use tokio::time;
 
 // futures for notification stream.next
@@ -13,9 +13,10 @@ use btleplug::platform::{Manager, Peripheral};
 // PedalPowerBalanceReference
 // CrankRevolutionDataPresent
 const ASSIOMA_LEFT: &str = "ASSIOMA64394L";
+const ASSIOMA_RIGHT: &str = "ASSIOMA37890R";
 const KIKR_PERIPHERAL: &str = "KICKR CORE BA1B";
 
-const TARGET_PERIPHERAL: &str = ASSIOMA_LEFT;
+const TARGET_PERIPHERAL: &str = KIKR_PERIPHERAL;
 
 const SERVICE_CYCLING_SPEED_CADENCE: &str = "1816";
 const SERVICE_CYCLING_POWER: &str = "1818";
@@ -27,6 +28,7 @@ const CHARACTERISTIC_POWER_MEASUREMENT: &str = "2a63";
 struct PowerFrame {
     watts: i16,
     balance: u8,
+    time: u128,
 }
 
 // The fields in the above table, reading from top to bottom,
@@ -158,8 +160,8 @@ async fn connect_peripheral(peripheral: &Peripheral) -> Result<(), Box<dyn Error
     let mut notification_stream = peripheral.notifications().await?;
 
     while let Some(notification) = notification_stream.next().await {
-        // println!("uuid {:?}, value {:?}", notification.uuid, notification.value);
-        parse_power_frame(notification.value);
+        let frame = parse_power_frame(notification.value);
+        println!("{{ \"time\":\"{}\",\"watts\":\"{}\",\"balance\":\"0.{}\" }}", frame.time, frame.watts, frame.balance);
     }
 
     peripheral.disconnect().await.expect("Unable to disconnect");
@@ -178,9 +180,8 @@ fn parse_power_frame(value: Vec<u8>) -> PowerFrame {
     let watts: i16 = ((num << 96) >> 112) as i16;
     // TODO only if bitflag is set?
     let balance: u8 = (((num << 80) >> 112) as u8) / 2;
-    println!("{{ watts:\"{}\", balance: \"0.{}\" }}", watts, balance);
     PowerFrame {
-        time: SystemTime::now(),
+        time: SystemTime::now().duration_since(UNIX_EPOCH).expect("Could not get time").as_millis(),
         watts: watts,
         balance: balance,
     }

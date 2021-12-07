@@ -2,6 +2,10 @@
 
 Messing around with recording data from my bikes power meter
 
+Runs on 
+- Win 10
+- RPI 4 ARM 64 bit
+
 ## Setup
 
 1. Ensure rust is installed
