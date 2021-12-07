@@ -1,5 +1,5 @@
 [package]
-name = "bluetooth"
+name = "power-thirst"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,3 +9,4 @@ edition = "2021"
 tokio =  { version = "1.14.0", features = ["rt-multi-thread", "macros", "time"] }
 btleplug = { version = "0.9", features = ["serde"] }
 futures = "0.3.18"
+rusqlite = "0.26.0"

@@ -5,7 +5,7 @@ use tokio::time;
 // futures for notification stream.next
 use futures::stream::StreamExt;
 
-use btleplug::api::{Central, CharPropFlags, CentralEvent, Manager as _, Peripheral as _, ScanFilter};
+use btleplug::api::{Central, CharPropFlags, Manager as _, Peripheral as _, ScanFilter};
 use btleplug::platform::{Manager, Peripheral};
 
 // 0000000000100011
@@ -16,7 +16,7 @@ const ASSIOMA_LEFT: &str = "ASSIOMA64394L";
 const ASSIOMA_RIGHT: &str = "ASSIOMA37890R";
 const KIKR_PERIPHERAL: &str = "KICKR CORE BA1B";
 
-const TARGET_PERIPHERAL: &str = KIKR_PERIPHERAL;
+const TARGET_PERIPHERAL: &str = ASSIOMA_LEFT;
 
 const SERVICE_CYCLING_SPEED_CADENCE: &str = "1816";
 const SERVICE_CYCLING_POWER: &str = "1818";
@@ -27,6 +27,7 @@ const CHARACTERISTIC_POWER_MEASUREMENT: &str = "2a63";
 
 struct PowerFrame {
     watts: i16,
+    // 0 == r, 100 = left
     balance: u8,
     time: u128,
 }
@@ -92,15 +93,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .expect("Cannot scan adapter");
     time::sleep(Duration::from_secs(10)).await;
     
-    //     while let Some(event) = events.next().await {
-    //         match event {
-    //             CentralEvent::DeviceDiscovered(id) => {
-    //                 println!("{:?}", id);
-    //             }
-    //             _ => {}
-    //         };
-    //     }
 
+    let target_peripherals: Vec<Peripheral> = Vec::new();
     let peripherals = adapter.peripherals().await?;
     for peripheral in peripherals.iter() {
         let props = peripheral.properties().await?.unwrap();
