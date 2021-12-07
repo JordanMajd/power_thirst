@@ -1,11 +1,11 @@
 use std::error::Error;
-use std::time::Duration;
+use std::time::{ Duration, SystemTime};
 use tokio::time;
 
 // futures for notification stream.next
 use futures::stream::StreamExt;
 
-use btleplug::api::{Central, CharPropFlags, Manager as _, Peripheral as _, ScanFilter};
+use btleplug::api::{Central, CharPropFlags, CentralEvent, Manager as _, Peripheral as _, ScanFilter};
 use btleplug::platform::{Manager, Peripheral};
 
 // 0000000000100011
@@ -69,25 +69,43 @@ enum CPS {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let manager = Manager::new().await?;
-    let adapter_list = manager.adapters().await?;
-    for adapter in adapter_list.iter() {
-        println!("Using adapter: {}", adapter.adapter_info().await?);
 
-        adapter
-            .start_scan(ScanFilter::default())
-            .await
-            .expect("Cannot scan adapter");
-        println!("Scanning for 10 seconds...");
-        time::sleep(Duration::from_secs(10)).await;
+    // get primary adapter
+    let adapter = manager
+        .adapters()
+        .await
+        .expect("Unable to get adapter")
+        .into_iter()
+        .nth(0)
+        .expect("Unable to get adapter");
 
-        let peripherals = adapter.peripherals().await?;
-        for peripheral in peripherals.iter() {
-            let props = peripheral.properties().await?.unwrap();
-            let name = props.local_name.unwrap_or(String::from("unknown"));
-            println!("Discovered: {}", name);
-            if name == TARGET_PERIPHERAL {
-                connect_peripheral(peripheral).await?;
-            }
+    println!("Using adapter: {}", adapter.adapter_info().await?);
+    
+    
+    // let mut events = adapter.events().await?;
+    
+    adapter
+    .start_scan(ScanFilter::default())
+    .await
+    .expect("Cannot scan adapter");
+    time::sleep(Duration::from_secs(10)).await;
+    
+    //     while let Some(event) = events.next().await {
+    //         match event {
+    //             CentralEvent::DeviceDiscovered(id) => {
+    //                 println!("{:?}", id);
+    //             }
+    //             _ => {}
+    //         };
+    //     }
+
+    let peripherals = adapter.peripherals().await?;
+    for peripheral in peripherals.iter() {
+        let props = peripheral.properties().await?.unwrap();
+        let name = props.local_name.unwrap_or(String::from("unknown"));
+        println!("Discovered: {}", name);
+        if name == TARGET_PERIPHERAL {
+            connect_peripheral(peripheral).await?;
         }
     }
 
@@ -118,13 +136,9 @@ async fn connect_peripheral(peripheral: &Peripheral) -> Result<(), Box<dyn Error
 
     peripheral.discover_services().await?;
     for service in peripheral.services() {
-        if service
-            .uuid
-            .to_string()
-            .contains(SERVICE_CYCLING_POWER)
-        {
+        if service.uuid.to_string().contains(SERVICE_CYCLING_POWER) {
             for characteristic in service.characteristics {
-                // TODO casing
+                // TODO caseing
                 if characteristic
                     .uuid
                     .to_string()
@@ -164,10 +178,9 @@ fn parse_power_frame(value: Vec<u8>) -> PowerFrame {
     let watts: i16 = ((num << 96) >> 112) as i16;
     // TODO only if bitflag is set?
     let balance: u8 = (((num << 80) >> 112) as u8) / 2;
-    // let num: u128 = u128::from_be_bytes(buf);
-    // let watts = ((num << 16) >> 110) as i16;
-    println!("{}:0.{}:{:#b}", watts, balance, num);
+    println!("{{ watts:\"{}\", balance: \"0.{}\" }}", watts, balance);
     PowerFrame {
+        time: SystemTime::now(),
         watts: watts,
         balance: balance,
     }
