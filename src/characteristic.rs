@@ -1,4 +1,0 @@
-struct Characteristic {
-    uuid: string;
-    
-}
